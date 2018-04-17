@@ -10,8 +10,8 @@ int main()
     /* WIDTH and HEIGHT of our summed-area table,
      * mostly used in image processing
      * (ex. computing the mean of a rectangle) */
-    unsigned int WIDTH = 3;
-    unsigned int HEIGHT = 3;
+    unsigned int WIDTH = 1337;
+    unsigned int HEIGHT = 42;
     assert((WIDTH > 0) && (HEIGHT > 0));
 
     /* create pseudo 2D array / vector for computing a summed-area table */
@@ -48,6 +48,7 @@ int main()
         summedAreaTableI[i].resize(HEIGHT);
 
     /* preprocess filling our summed-area table */
+    auto pre_start = std::chrono::high_resolution_clock::now();
     int value = 0;
     for(unsigned int y = 0; y < HEIGHT; ++y) {
         for(unsigned int x = 0; x < WIDTH; ++x) {
@@ -64,6 +65,9 @@ int main()
             summedAreaTableI[x][y] = value;
         }
     }
+    auto pre_end = std::chrono::high_resolution_clock::now();
+    auto pre_time = std::chrono::duration_cast<std::chrono::microseconds>(pre_end-pre_start);
+    std::cout << "Summed-area table preprocessing time: " << pre_time.count() << " microseconds" << std::endl;
 
     /* how to use our generated summed-area table,
      * now it is easy to compute a sum of any rectangle size in
@@ -86,34 +90,39 @@ int main()
     assert((rectHeight <= HEIGHT) && (rectPosY < HEIGHT));
 
 
+    auto sum_start = std::chrono::high_resolution_clock::now();
     /* From Wiki: https://en.wikipedia.org/wiki/Summed-area_table
      * get each corner value of our rectangle */
     int A = 0, B = 0, C = 0, D = 0;
-
     /* get correct values from summed-area table,
      * (take care about out of bounce errors) */
     if(rectPosX > 0 && rectPosY> 0)
         A = summedAreaTableI[rectPosX-1][rectPosY-1];
-    if(imagePosY > 0)
+    if(rectPosY > 0)
         B = summedAreaTableI[rectPosX+rectWidth-1][rectPosY-1];
-    if(imagePosX > 0)
+    if(rectPosX > 0)
         C = summedAreaTableI[rectPosX-1][rectPosY+rectHeight-1];
 
     D = summedAreaTableI[rectPosX+rectWidth-1][rectPosY+rectHeight-1];
 
     int sum = A - B - C + D;
+    auto sum_end = std::chrono::high_resolution_clock::now();
+    auto sat_time = std::chrono::duration_cast<std::chrono::microseconds>(sum_end-sum_start);
 
+    sum_start = std::chrono::high_resolution_clock::now();
     /* check against native way in O(rectWidth * rectHeight) */
     int sumNative = 0;
-    for(unsigned int y = rectPosY; y < rectWidth; ++y) {
-        for(unsigned int x = rectPosX; x < rectHeight; ++x) {
+    for(unsigned int y = rectPosY; y < rectHeight; ++y) {
+        for(unsigned int x = rectPosX; x < rectWidth; ++x) {
             sumNative += xs[x][y];
         }
     }
+    sum_end = std::chrono::high_resolution_clock::now();
+    auto native_sum = std::chrono::duration_cast<std::chrono::microseconds>(sum_end-sum_start);
 
     assert(sum == sumNative);
-    cout << "Final sum of rectangle: " << sum << endl;
-    cout << "Slow way sum of rectangle: " << sumNative << endl;
+    cout << "Summed-area table result: " << sum << " in " << sat_time.count() << " microseconds." << endl;
+    cout << "Native (slow) way result: " << sumNative << " in " << native_sum.count() << " microseconds." << endl;
 
     return 0;
 }
